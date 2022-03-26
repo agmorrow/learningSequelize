@@ -9,19 +9,19 @@ router.post('/', async (req, res) => {
     username,
     email,
     password,
+    numberOfPets,
   } = req.body;
 if (!username || !email || !password) {
   return res.status(400).json({ error: 'You must provide username, password, and email.'});
 }
 
 try {
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
 
   const newUser = await User.create({
     username,
     email,
-    password: hashedPassword,
+    password,
+    numberOfPets,
   });
   res.json(newUser);
 } catch (e) {
@@ -69,7 +69,8 @@ router.patch('/:userId', async (req, res) => {
       {
         where: {
           id: req.params.userId,
-        }
+        },
+        individualHooks: true,
       }
     );
     const user = await User.findByPk(req.params.userId);
@@ -93,4 +94,66 @@ router.delete('/:userId', async (req, res) => {
   }
 });
 
+
+// For logging in a user to out app
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(401).json({ error: 'You must provide a valid email and password' });
+  }
+
+  try {
+    // find the user with te given email
+    const user = await User.findOne({
+      where: {
+        email,
+      }
+    });
+  // check if the user actually exists with that given email
+    if (!user) {
+       // of no user exists, give them a 400
+      return res.status(400).json({ error: 'No user with that email'});
+    }
+ // take the user hashed password and compare it with the password that they're passing in from the form
+    const isMatchingPassword = await bcrypt.compare(password, user.password)
+
+    if (!isMatchingPassword) {
+      return res.status(400).json({ error: 'Invalid password'});
+    }
+
+res.json({ message: 'You are now logged in successfully' });
+
+  } catch (e) {
+    res.json(e);
+  }
+});
+
+// route for getting a user by their if and checking if they have a pet or not
+// /localhost:3001/api/users/hasPets/:idwildcard
+router.get('/hasPets/:userId', async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found'});
+    }
+
+const doesHavePets = user.hasPets();
+
+if (!doesHavePets) {
+  return res.status(400).json({ message: 'User has no pets'});
+}
+  res.json({ message: 'User does have pets'});
+  } catch (e) {
+    res.json(e);
+  }
+
+});
+
+
+/*
+* 1.
+* 2. endpoint is a PATCH request to update a user by their primary key, this should respond back with the updated user data
+* 3. endpoint is a DELETE request to delete a user by their primary key, this should respond back with the deleted user data
+* */
 module.exports = router;
