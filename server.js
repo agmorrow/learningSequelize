@@ -16,6 +16,12 @@ This is accomplished by using "routing middleware"
 
 
 app.use(routes);
+
+/*
+Create an endpoint that hits /api/todos with a GET Request
+that route should respond with all of the todos from the database
+*/
+
 // Connect to the database prior to starting our server
 // Force the database to drop/recreate the table
 // whenever we start /restart our server
